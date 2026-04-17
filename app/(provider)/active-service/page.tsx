@@ -11,6 +11,8 @@ import {
   subscribeToService,
   updateServiceStatus,
   updateService,
+  updateProvider,
+  getProvider,
   getUser,
 } from '@/lib/firestore'
 import { formatPrice } from '@/lib/pricing'
@@ -125,8 +127,6 @@ export default function ProviderActiveServicePage() {
 
       // Si fue efectivo, agregar deuda de comisión
       if (service?.paymentMethod === 'cash') {
-        const { updateProvider } = await import('@/lib/firestore')
-        const { getProvider } = await import('@/lib/firestore')
         const provider = await getProvider(user.uid)
         const commissionDebt = service.commissionAmount
         await updateProvider(user.uid, {

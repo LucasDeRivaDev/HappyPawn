@@ -6,8 +6,7 @@ import { MapViewDynamic } from '@/components/map/MapViewDynamic'
 import { ServiceChat } from '@/components/services/ServiceChat'
 import { useAuthStore } from '@/store/auth'
 import { useServiceStore } from '@/store/service'
-import { subscribeToService, updateServiceStatus, createRating } from '@/lib/firestore'
-import { subscribeToProvider } from '@/lib/firestore'
+import { subscribeToService, updateServiceStatus, createRating, subscribeToProvider } from '@/lib/firestore'
 import { useLocation } from '@/hooks/useLocation'
 import { formatPrice } from '@/lib/pricing'
 import { toast } from 'sonner'
@@ -103,8 +102,7 @@ export default function TrackingPage() {
     if (!service || !user || !service.providerId) return
     setSubmittingRating(true)
     try {
-      const { createRating: createR } = await import('@/lib/firestore')
-      await createR({
+      await createRating({
         serviceId: service.id,
         fromUserId: user.uid,
         toUserId: service.providerId,

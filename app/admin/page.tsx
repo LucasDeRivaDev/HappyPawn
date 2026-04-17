@@ -8,6 +8,7 @@ import {
   getPendingReports,
   setVerification,
   updateReport,
+  updateUser,
   queryCollection,
   updateConfig,
 } from '@/lib/firestore'
@@ -60,7 +61,6 @@ export default function AdminPage() {
   async function handleApproveVerification(uid: string) {
     try {
       await setVerification(uid, { status: 'approved', reviewedAt: null as any, reviewedByAdminUid: user!.uid })
-      const { updateUser } = await import('@/lib/firestore')
       await updateUser(uid, { verificationStatus: 'approved', isVerified: true })
       toast.success('Identidad aprobada')
       await loadData()
@@ -77,7 +77,6 @@ export default function AdminPage() {
         reviewedAt: null as any,
         reviewedByAdminUid: user!.uid,
       })
-      const { updateUser } = await import('@/lib/firestore')
       await updateUser(uid, { verificationStatus: 'rejected' })
       toast.success('Verificación rechazada')
       await loadData()
@@ -108,7 +107,6 @@ export default function AdminPage() {
 
   async function handleToggleSuspend(u: User) {
     try {
-      const { updateUser } = await import('@/lib/firestore')
       const newState = !u.isSuspended
       await updateUser(u.uid, {
         isSuspended: newState,
