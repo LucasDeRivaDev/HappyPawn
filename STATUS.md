@@ -168,11 +168,33 @@ components/
 - [x] Precios configurables desde Firestore con fallback local
 - [x] Sistema de ratings con promedio automático
 
+### Pagos
+- [x] MercadoPago Checkout Pro integrado (pago va a cuenta de PawGo)
+- [x] Webhook `/api/mp-webhook` confirma pagos y actualiza Firestore
+- [x] Tracking redirige al checkout de MP al completar con pago online
+- [x] Páginas de resultado: /payment/success, /failure, /pending
+
+### Notificaciones Push (FCM)
+- [x] Service worker `firebase-messaging-sw.js` para notificaciones en background
+- [x] Hook `usePushNotifications` pide permiso y guarda fcmToken en Firestore
+- [x] API `/api/notifications/send` para enviar notificaciones a cualquier usuario
+- [x] Notificación al owner cuando el provider acepta el servicio
+
+### UI / UX
+- [x] Dark mode toggle en perfil owner y provider
+- [x] Animaciones Framer Motion: transiciones de página, slide-up bottom sheet, fade-in cards
+- [x] Suspender/reactivar usuarios desde el panel admin
+- [x] Pantalla `/suspended` para cuentas bloqueadas con redirección automática
+
+### Features extra
+- [x] Ajuste de precio ±10% por provider (slider en perfil, visible en bottom sheet y solicitud)
+- [x] Chat interno owner ↔ provider durante el servicio con filtro anti-contacto externo
+
 ---
 
 ## ❌ Pendiente (en orden de prioridad)
 
-### 1. MercadoPago Marketplace — PRIORIDAD ALTA ✅ CÓDIGO LISTO
+### 1. MercadoPago Checkout Pro ✅ COMPLETADO
 Todo el código está implementado. Falta cargar las credenciales reales en `.env.local`:
 
 - [x] `app/api/payment/create-preference/route.ts` ✅
@@ -199,75 +221,8 @@ NEXT_PUBLIC_APP_URL=https://pawgo.vercel.app
 
 ---
 
-### 2. Notificaciones Push FCM — PRIORIDAD ALTA
-
-- [ ] **`public/firebase-messaging-sw.js`** — service worker para recibir notificaciones en background
-- [ ] **`hooks/usePushNotifications.ts`** — pide permiso, obtiene FCM token, lo guarda en `users/{uid}.fcmToken`
-- [ ] **`app/api/notifications/send/route.ts`** — recibe `{ toUid, title, body }`, lee `fcmToken` del usuario, envía con `adminMessaging().send()`
-- [ ] Llamar la notificación en `active-service` al aceptar → notificar al owner
-- [ ] Agregar `fcmToken?: string` al tipo `User` en `types/index.ts`
-- [ ] Inicializar FCM en `lib/firebase.ts` (solo en browser, no en SSR)
-
-Variables de entorno necesarias:
-```
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
-NEXT_PUBLIC_FIREBASE_APP_ID=...
-NEXT_PUBLIC_FIREBASE_VAPID_KEY=...   ← Firebase Console > Project Settings > Cloud Messaging
-```
-
----
-
-### 3. Suspender usuarios desde el admin — PRIORIDAD MEDIA
-
-- [ ] En `app/admin/page.tsx` tab "Usuarios": botón "Suspender" / "Reactivar" con input de motivo
-- [ ] Crear `app/suspended/page.tsx`: pantalla de cuenta suspendida con motivo
-- [ ] En `components/auth/AuthProvider.tsx`: si `user.isSuspended === true` → `router.replace('/suspended')`
-
----
-
-### 4. Ajuste de precio por proveedor ±10% — PRIORIDAD MEDIA
-
-- [ ] En `app/(provider)/provider-profile/page.tsx`: slider para `providerAdjustPercent` (-10 a +10)
-- [ ] En `app/(owner)/request/[type]/page.tsx`: si viene con `?providerId=...`, leer su ajuste y pasarlo a `calculateWalkPrice()`
-- [ ] En `components/services/ProviderBottomSheet.tsx`: mostrar precio ajustado del proveedor
-
----
-
-### 5. Chat interno owner ↔ provider — PRIORIDAD BAJA
-
-- [ ] Colección Firestore: `chats/{serviceId}/messages/{messageId}` con campos `fromUid`, `text`, `createdAt`, `filtered`
-- [ ] Crear `components/services/ServiceChat.tsx`: chat en tiempo real con filtro anti-contacto externo (bloquea teléfonos, emails, redes sociales)
-- [ ] Integrar en `tracking/page.tsx` y `active-service/page.tsx` cuando el servicio está activo
-- [ ] Agregar reglas Firestore para chats (solo owner y provider asignados pueden leer/escribir)
-
----
-
-### 6. Animaciones Framer Motion — PRIORIDAD BAJA
-
-```bash
-npm install framer-motion
-```
-- [ ] `AnimatePresence` + `motion.div` en `Providers.tsx` para transiciones de página
-- [ ] Slide-up animation en `ProviderBottomSheet.tsx`
-- [ ] Fade-in en `NearbyRequestCard.tsx`
-
----
-
-### 7. Dark mode toggle — PRIORIDAD BAJA
-ThemeProvider ya está configurado con `next-themes`. Solo falta:
-- [ ] Botón en `/profile` y `/provider-profile` para alternar dark/light
-```tsx
-import { useTheme } from 'next-themes'
-const { theme, setTheme } = useTheme()
-<button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-  {theme === 'dark' ? '☀️ Modo claro' : '🌙 Modo oscuro'}
-</button>
-```
-
----
-
-### 8. PWA Icons — PRIORIDAD BAJA
-- [ ] Crear `public/icon-192.png` y `public/icon-512.png` (logo PawGo: pata naranja)
+### 2. PWA Icons — PRIORIDAD BAJA
+- [ ] Crear `public/icon-192.png` y `public/icon-512.png` (logo HappyPaw: pata naranja)
 - [ ] Actualizar `public/manifest.json` con los paths
 
 ---
@@ -324,4 +279,4 @@ vercel --prod
 
 ---
 
-*Última actualización: 17 de abril 2026*
+*Última actualización: 17 de abril 2026 — sesión 2*

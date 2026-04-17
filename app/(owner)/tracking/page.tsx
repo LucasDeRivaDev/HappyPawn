@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { MapViewDynamic } from '@/components/map/MapViewDynamic'
+import { ServiceChat } from '@/components/services/ServiceChat'
 import { useAuthStore } from '@/store/auth'
 import { useServiceStore } from '@/store/service'
 import { subscribeToService, updateServiceStatus, createRating } from '@/lib/firestore'
@@ -265,7 +266,17 @@ export default function TrackingPage() {
       </div>
 
       {/* Panel inferior */}
-      <div className="absolute bottom-4 left-4 right-4 z-20">
+      <div className="absolute bottom-4 left-4 right-4 z-20 space-y-2">
+        {/* Chat — disponible cuando hay proveedor asignado */}
+        {service.providerId && (
+          ['accepted', 'provider_on_way', 'in_progress'].includes(service.status) && (
+            <ServiceChat
+              serviceId={service.id}
+              otherUserName="el paseador"
+            />
+          )
+        )}
+
         {service.status === 'requested' && (
           <Button
             variant="outline"
