@@ -27,6 +27,8 @@ export default function ProviderProfilePage() {
   const [bio, setBio] = useState(provider?.bio ?? '')
   const [phone, setPhone] = useState(user?.phone ?? '')
   const [saving, setSaving] = useState(false)
+  const [adjustPercent, setAdjustPercent] = useState(provider?.providerAdjustPercent ?? 0)
+  const [savingAdjust, setSavingAdjust] = useState(false)
 
   useEffect(() => {
     if (searchParams.get('mpConnected') === 'true') {
@@ -50,6 +52,19 @@ export default function ProviderProfilePage() {
       toast.error('Error al guardar')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleSaveAdjust() {
+    if (!user) return
+    setSavingAdjust(true)
+    try {
+      await updateProvider(user.uid, { providerAdjustPercent: adjustPercent })
+      toast.success('Ajuste de precio guardado')
+    } catch {
+      toast.error('Error al guardar')
+    } finally {
+      setSavingAdjust(false)
     }
   }
 
@@ -174,6 +189,47 @@ export default function ProviderProfilePage() {
               )}
             </div>
           )}
+        </div>
+
+        {/* Ajuste de precio */}
+        <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
+          <div>
+            <p className="font-semibold">Ajuste de precio</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Podés cobrar hasta un 10% más o menos que el precio base
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">-10%</span>
+              <span className={`text-lg font-bold ${
+                adjustPercent > 0 ? 'text-green-600' :
+                adjustPercent < 0 ? 'text-red-500' : 'text-foreground'
+              }`}>
+                {adjustPercent > 0 ? `+${adjustPercent}%` : `${adjustPercent}%`}
+              </span>
+              <span className="text-sm text-muted-foreground">+10%</span>
+            </div>
+            <input
+              type="range"
+              min={-10}
+              max={10}
+              step={1}
+              value={adjustPercent}
+              onChange={(e) => setAdjustPercent(Number(e.target.value))}
+              className="w-full accent-primary"
+            />
+          </div>
+
+          <Button
+            size="sm"
+            className="w-full"
+            onClick={handleSaveAdjust}
+            disabled={savingAdjust || adjustPercent === (provider?.providerAdjustPercent ?? 0)}
+          >
+            {savingAdjust ? 'Guardando...' : 'Guardar ajuste'}
+          </Button>
         </div>
 
         {/* MercadoPago */}

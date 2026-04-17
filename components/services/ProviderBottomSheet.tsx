@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useAuthStore } from '@/store/auth'
+import { formatPrice, DEFAULT_PRICING_CONFIG } from '@/lib/pricing'
+import { calculateWalkPrice } from '@/lib/pricing'
 
 interface ProviderBottomSheetProps {
   provider: Provider
@@ -24,7 +26,8 @@ export function ProviderBottomSheet({
   onClose,
   onRequest,
 }: ProviderBottomSheetProps) {
-  const providerUser = useAuthStore((s) => s.user) // Acá iría el user del provider, simplificado
+  const adjust = provider.providerAdjustPercent ?? 0
+  const basePrice = calculateWalkPrice(30, DEFAULT_PRICING_CONFIG, adjust)
 
   return (
     <>
@@ -66,6 +69,17 @@ export function ProviderBottomSheet({
             </div>
           </div>
 
+          {/* Precio ajustado */}
+          <div className="text-right">
+            <p className="font-bold text-primary text-sm">{formatPrice(basePrice)}</p>
+            <p className="text-xs text-muted-foreground">30 min</p>
+            {adjust !== 0 && (
+              <span className={`text-xs font-medium ${adjust > 0 ? 'text-orange-500' : 'text-green-500'}`}>
+                {adjust > 0 ? `+${adjust}%` : `${adjust}%`}
+              </span>
+            )}
+          </div>
+
           <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
         </div>
 
@@ -89,7 +103,7 @@ export function ProviderBottomSheet({
             Cerrar
           </Button>
           <Button className="flex-1" onClick={onRequest}>
-            Solicitar servicio
+            Solicitar {formatPrice(basePrice)}
           </Button>
         </div>
       </motion.div>
