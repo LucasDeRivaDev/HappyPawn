@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useTheme } from 'next-themes'
 import { useAuthStore } from '@/store/auth'
 import { updateUser, updateProvider } from '@/lib/firestore'
 import { auth } from '@/lib/firebase'
@@ -20,6 +21,7 @@ export default function ProviderProfilePage() {
   const reset = useAuthStore((s) => s.reset)
 
   const searchParams = useSearchParams()
+  const { theme, setTheme } = useTheme()
 
   const [editing, setEditing] = useState(false)
   const [bio, setBio] = useState(provider?.bio ?? '')
@@ -208,6 +210,18 @@ export default function ProviderProfilePage() {
             </div>
           )}
         </div>
+
+        {/* Tema */}
+        <button
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="w-full p-4 bg-card rounded-2xl border border-border text-left flex items-center justify-between hover:border-primary/30 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-xl">{theme === 'dark' ? '☀️' : '🌙'}</span>
+            <p className="font-medium text-sm">{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</p>
+          </div>
+          <span className="text-xs text-muted-foreground">Cambiar</span>
+        </button>
 
         <Button
           variant="outline"

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import { getUser, getProvider } from '@/lib/firestore'
@@ -9,6 +10,8 @@ import { usePushNotifications } from '@/hooks/usePushNotifications'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setUser, setProvider, setLoading } = useAuthStore()
+  const router = useRouter()
+  const pathname = usePathname()
 
   usePushNotifications()
 
@@ -28,6 +31,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ])
         setUser(userData)
         setProvider(providerData)
+
+        // Redirigir a suspendido si la cuenta está suspendida
+        if (userData?.isSuspended && pathname !== '/suspended') {
+          router.replace('/suspended')
+        }
       } catch {
         setUser(null)
         setProvider(null)
@@ -37,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
 
     return unsubscribe
-  }, [setUser, setProvider, setLoading])
+  }, [setUser, setProvider, setLoading, router, pathname])
 
   return <>{children}</>
 }
