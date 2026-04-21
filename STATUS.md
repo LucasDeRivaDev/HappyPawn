@@ -13,9 +13,20 @@ Decile a Claude: **"Leé el archivo STATUS.md en `C:/Proyectos con IA/paseospati
 
 ---
 
+## Deploy
+
+- **URL producción**: https://pawgo-theta.vercel.app ✅ ACTIVO
+- **Última vez deployado**: 18 de abril 2026 — funcionando correctamente
+- **Comando para deployar**:
+  ```bash
+  cd "C:/Proyectos con IA/paseospatitasfelices/pawgo"
+  vercel --prod --scope luca-de-rivias-projects
+  ```
+
+---
+
 ## Stack tecnológico
 
-### Usado
 - **Next.js 16** (App Router, TypeScript)
 - **Tailwind CSS v4** + **shadcn/ui** (componentes UI)
 - **Firebase** (Auth, Firestore, Storage) — proyecto: `paseospatitasfelices`
@@ -24,30 +35,44 @@ Decile a Claude: **"Leé el archivo STATUS.md en `C:/Proyectos con IA/paseospati
 - **react-leaflet v5** + **OpenStreetMap** (mapa en tiempo real)
 - **Nominatim** (geocoding gratuito, sin API key)
 - **Sonner** (notificaciones toast)
-- **MercadoPago SDK** (instalado, parcialmente integrado)
-
-### Por integrar
-- **Firebase Cloud Messaging (FCM)** — notificaciones push
-- **MercadoPago Marketplace** — split automático 95/5 con OAuth del provider
-- **Framer Motion** — animaciones de pantalla
+- **MercadoPago Checkout Pro** (pago a cuenta de PawGo)
+- **Firebase Cloud Messaging (FCM)** (notificaciones push)
+- **Framer Motion** (animaciones)
 
 ---
 
-## Variables de entorno (.env.local)
+## Variables de entorno
+
+### .env.local (desarrollo local)
 ```
 NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyDl1K1qNp_Qh4fD0g8Cidy1v8dvGZB7QoM
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=paseospatitasfelices.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=paseospatitasfelices
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=paseospatitasfelices.firebasestorage.app
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=(pendiente)
-NEXT_PUBLIC_FIREBASE_APP_ID=(pendiente)
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=959361229414
+NEXT_PUBLIC_FIREBASE_APP_ID=1:959361229414:web:f839d6b50f88e130a303a7
 FIREBASE_ADMIN_CLIENT_EMAIL=firebase-adminsdk-fbsvc@paseospatitasfelices.iam.gserviceaccount.com
 FIREBASE_ADMIN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-MP_MARKETPLACE_ACCESS_TOKEN=(pendiente — token de la PLATAFORMA PawGo)
-MP_CLIENT_ID=(pendiente)
-MP_CLIENT_SECRET=(pendiente)
-MP_WEBHOOK_SECRET=(pendiente)
+MP_ACCESS_TOKEN=APP_USR-8641337946987313-041717-...   ← token de prueba
+NEXT_PUBLIC_FIREBASE_VAPID_KEY=BAwSjl76dv03D4Eqm_...
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+CRON_SECRET=pawgo_cron_dev_2026
+```
+
+### Vercel (producción) — todas cargadas ✅
+| Variable | Estado |
+|---|---|
+| NEXT_PUBLIC_FIREBASE_* (6 vars) | ✅ |
+| FIREBASE_ADMIN_CLIENT_EMAIL | ✅ |
+| FIREBASE_ADMIN_PRIVATE_KEY | ✅ cargada 18/04/2026 |
+| MP_ACCESS_TOKEN | ✅ token de prueba |
+| NEXT_PUBLIC_FIREBASE_VAPID_KEY | ✅ |
+| NEXT_PUBLIC_APP_URL | ✅ https://pawgo-theta.vercel.app |
+| CRON_SECRET | ✅ |
+
+⚠️ Para cargar FIREBASE_ADMIN_PRIVATE_KEY en Vercel siempre usar stdin (no --value):
+```bash
+cat .env.local | grep FIREBASE_ADMIN_PRIVATE_KEY | sed 's/FIREBASE_ADMIN_PRIVATE_KEY=//' | tr -d '"' | vercel env add FIREBASE_ADMIN_PRIVATE_KEY production --yes
 ```
 
 ---
@@ -74,10 +99,16 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 /provider-profile        → Perfil del provider/driver
 /reports                 → Formulario de reporte para provider
 /admin                   → Panel de administración (5 tabs)
+/suspended               → Pantalla para cuentas suspendidas
 /payment/success         → Pago exitoso
 /payment/failure         → Pago fallido
 /payment/pending         → Pago en proceso
+/connect-mp              → Conexión MercadoPago del provider (OAuth)
 /api/auth/dni            → API: login con DNI (Admin SDK)
+/api/payment/create-preference → Crea preferencia MP
+/api/mp-webhook          → Webhook de pagos MP
+/api/mp/callback         → Callback OAuth MP
+/api/notifications/send  → Envía push FCM
 ```
 
 ---
@@ -120,10 +151,11 @@ components/
 4. **MercadoPago split**: La preferencia se crea con el token del PROVEEDOR (no de la plataforma). La plataforma recibe su parte vía `marketplace_fee`.
 5. **dni_index**: Solo se lee desde el servidor (Admin SDK). Las reglas de Firestore bloquean la lectura desde el cliente.
 6. **Drivers y walkers** usan las mismas páginas. No hay grupo `(driver)` — fue eliminado por conflicto de rutas.
+7. **FIREBASE_ADMIN_PRIVATE_KEY en Vercel**: siempre cargar por stdin, nunca con --value (los saltos de línea rompen el CLI).
 
 ---
 
-## ✅ Completado
+## ✅ Todo completado
 
 ### Autenticación
 - [x] Registro 4 pasos completo
@@ -167,6 +199,7 @@ components/
 - [x] Audit log automático en cambios de estado
 - [x] Precios configurables desde Firestore con fallback local
 - [x] Sistema de ratings con promedio automático
+- [x] Deploy en Vercel con todas las variables de entorno ✅
 
 ### Pagos
 - [x] MercadoPago Checkout Pro integrado (pago va a cuenta de PawGo)
@@ -189,41 +222,53 @@ components/
 ### Features extra
 - [x] Ajuste de precio ±10% por provider (slider en perfil, visible en bottom sheet y solicitud)
 - [x] Chat interno owner ↔ provider durante el servicio con filtro anti-contacto externo
+- [x] Cola de próximo paseo: cuando quedan ≤15 min aparecen solicitudes cercanas para aceptar
+- [x] Cuenta regresiva en tiempo real en la pantalla de servicio activo
+- [x] Al completar servicio con próximo en cola → redirige directo al siguiente
+
+### Correcciones sesión 20/04/2026
+- [x] Bug Turbopack: `firebase/messaging` movido a dynamic import (rompía el login)
+- [x] Bug auth: todas las páginas protegidas esperan `authLoading` antes de redirigir (refresh mandaba al login)
+- [x] Bug z-index: mapa Leaflet tapaba el BottomNav y header (fix con `isolation: isolate`)
+- [x] Bug `startedAt`/`finishedAt`: ahora guardan `serverTimestamp()` real (antes guardaban `null`)
+- [x] Firebase Storage rules creadas y deployadas (bloqueaban el registro)
+- [x] Precio transporte pet-friendly: campo destino con geocoding real y precio por km
+- [x] Seed de datos cargado en producción ✅
+- [x] Rol admin seteado en Firestore ✅
 
 ---
 
 ## ❌ Pendiente (en orden de prioridad)
 
-### 1. MercadoPago Checkout Pro ✅ COMPLETADO
-Todo el código está implementado. Falta cargar las credenciales reales en `.env.local`:
+### 1. Reservas anticipadas — PRÓXIMA FEATURE GRANDE
+Cliente elige paseador específico + fecha (1-2 días adelante) + horario fijo.
+Reglas acordadas:
+- Pago obligatorio por MP (no efectivo): seña del 20% al reservar
+- Cliente cancela < 12hs: 5% a PawGo, 15% al paseador (pierde la seña)
+- Cliente cancela ≥ 12hs: devolución completa
+- Paseador cancela < 12hs: devolución completa al cliente + notificación + el cliente puede calificarlo
+- Las reservas aparecen en el perfil del paseador como pestaña "Reservas"
+- Los turnos reservados aparecen en el perfil del owner también
 
-- [x] `app/api/payment/create-preference/route.ts` ✅
-- [x] `app/api/mp-webhook/route.ts` ✅
-- [x] `app/(provider)/connect-mp/page.tsx` ✅
-- [x] `app/api/mp/callback/route.ts` ✅
-- [x] `app/(owner)/tracking/page.tsx` — redirige a MP al completar con pago online ✅
-- [x] `app/(provider)/provider-profile/page.tsx` — muestra estado de conexión MP ✅
+Cambios técnicos necesarios:
+- Nuevo status `scheduled` en tipos + campos: `scheduledAt`, `depositAmount`, `depositPaid`, `isScheduled`
+- API `/api/bookings/cancel` con lógica de reembolso parcial/total
+- UI owner: fecha/hora picker + pago de seña via MP
+- UI provider: pestaña "Reservas" en perfil
 
-**Para activar, cargar en `.env.local` y en Vercel:**
-```
-MP_MARKETPLACE_ACCESS_TOKEN=APP_USR-...   ← token de la PLATAFORMA PawGo
-MP_CLIENT_ID=...                          ← ID de la app MP Marketplace
-MP_CLIENT_SECRET=...                      ← secret de la app MP Marketplace
-NEXT_PUBLIC_MP_CLIENT_ID=...              ← mismo client_id (para el frontend)
-NEXT_PUBLIC_APP_URL=https://pawgo.vercel.app
-```
+### 2. MercadoPago Marketplace — 🚫 NO TOCAR POR AHORA
+> Lucas decidió dejarlo para mucho más adelante. No retomar este tema hasta que lo pida explícitamente.
+> Cuando llegue el momento: split automático owner→provider via OAuth + marketplace_fee.
 
-**Pasos para obtener credenciales:**
-1. Entrar a developers.mercadopago.com.ar
-2. Crear una app con tipo "Marketplace"
-3. Copiar Client ID, Client Secret y Access Token
-4. En "Redirect URI" agregar: `https://pawgo.vercel.app/api/mp/callback`
+### 3. Afinar layout del mapa en /home — PRIORIDAD BAJA
+- El mapa y el BottomNav funcionan pero los tamaños necesitan ajuste visual
 
----
-
-### 2. PWA Icons — PRIORIDAD BAJA
-- [ ] Crear `public/icon-192.png` y `public/icon-512.png` (logo HappyPaw: pata naranja)
+### 4. PWA Icons — PRIORIDAD BAJA
+- [ ] Crear `public/icon-192.png` y `public/icon-512.png` (logo PawGo: pata)
 - [ ] Actualizar `public/manifest.json` con los paths
+
+### 5. README profesional del repo — para portfolio
+- Descripción del proyecto, tech stack, screenshots, link al deploy
 
 ---
 
@@ -259,14 +304,17 @@ npm run dev
 # Verificar TypeScript sin errores
 npx tsc --noEmit
 
-# Deployar reglas de Firestore
-firebase deploy --only firestore:rules --project paseospatitasfelices
-
 # Build de producción
 npm run build
 
 # Deploy en Vercel
-vercel --prod
+vercel --prod --scope luca-de-rivias-projects
+
+# Deployar reglas de Firestore
+firebase deploy --only firestore:rules --project paseospatitasfelices
+
+# Cargar FIREBASE_ADMIN_PRIVATE_KEY en Vercel (siempre así, con stdin)
+cat .env.local | grep FIREBASE_ADMIN_PRIVATE_KEY | sed 's/FIREBASE_ADMIN_PRIVATE_KEY=//' | tr -d '"' | vercel env add FIREBASE_ADMIN_PRIVATE_KEY production --yes
 ```
 
 ---
@@ -276,7 +324,18 @@ vercel --prod
 - **Developer**: Lucas Cabrera (LucasDeRivaDev)
 - **Firebase project ID**: `paseospatitasfelices`
 - **Carpeta local**: `C:/Proyectos con IA/paseospatitasfelices/pawgo`
+- **Repo GitHub**: github.com/LucasDeRivaDev/paseospatitasfelices
+- **URL producción**: https://pawgo-theta.vercel.app
+
+## Git
+```bash
+# Para hacer commit y push
+cd "C:/Proyectos con IA/paseospatitasfelices/pawgo"
+git add .
+git commit -m "mensaje"
+git push origin master
+```
 
 ---
 
-*Última actualización: 17 de abril 2026 — sesión 2*
+*Última actualización: 20 de abril 2026 — sesión 4*

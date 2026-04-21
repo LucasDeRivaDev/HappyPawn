@@ -1,0 +1,10 @@
+{
+  "name": "PawGo",
+  "short_name": "PawGo",
+  "description": "Servicios para mascotas en Argentina",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1A1A2E",
+  "theme_color": "#FF6B35",
+  "icons": []
+}

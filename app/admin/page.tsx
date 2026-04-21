@@ -24,6 +24,7 @@ import type { Verification, Report, User, Service } from '@/types'
 export default function AdminPage() {
   const router = useRouter()
   const user = useAuthStore((s) => s.user)
+  const authLoading = useAuthStore((s) => s.loading)
 
   const [verifications, setVerifications] = useState<Verification[]>([])
   const [reports, setReports] = useState<Report[]>([])
@@ -39,10 +40,11 @@ export default function AdminPage() {
   const [savingConfig, setSavingConfig] = useState(false)
 
   useEffect(() => {
-    if (!user) { router.replace('/login'); return }
+    if (!authLoading && !user) { router.replace('/login'); return }
+    if (!user) return
     if (user.role !== 'admin') { router.replace('/home'); return }
     loadData()
-  }, [user, router])
+  }, [user, authLoading, router])
 
   async function loadData() {
     const [v, r, u, s] = await Promise.all([

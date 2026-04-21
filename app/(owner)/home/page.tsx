@@ -15,14 +15,15 @@ import type { Provider } from '@/types'
 export default function OwnerHome() {
   const router = useRouter()
   const user = useAuthStore((s) => s.user)
+  const loading = useAuthStore((s) => s.loading)
   const { userLocation } = useLocation(false)
   const providers = useProviders()
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null)
 
   // Redirigir si no está autenticado
   useEffect(() => {
-    if (!user) router.replace('/login')
-  }, [user, router])
+    if (!loading && !user) router.replace('/login')
+  }, [user, loading, router])
 
   const availableCount = providers.filter((p) => p.isAvailable && p.currentLocation).length
 

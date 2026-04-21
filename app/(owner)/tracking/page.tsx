@@ -26,6 +26,7 @@ export default function TrackingPage() {
   const searchParams = useSearchParams()
   const serviceId = searchParams.get('serviceId')
   const user = useAuthStore((s) => s.user)
+  const authLoading = useAuthStore((s) => s.loading)
 
   const [service, setService] = useState<Service | null>(null)
   const [provider, setProvider] = useState<Provider | null>(null)
@@ -38,7 +39,8 @@ export default function TrackingPage() {
   const { userLocation } = useLocation(false)
 
   useEffect(() => {
-    if (!user) { router.replace('/login'); return }
+    if (!authLoading && !user) { router.replace('/login'); return }
+    if (!user) return
     if (!serviceId) { router.replace('/home'); return }
 
     const unsub = subscribeToService(serviceId, (svc) => {
@@ -53,7 +55,7 @@ export default function TrackingPage() {
       }
     })
     return unsub
-  }, [user, serviceId, router])
+  }, [user, authLoading, serviceId, router])
 
   useEffect(() => {
     if (!service?.providerId) return

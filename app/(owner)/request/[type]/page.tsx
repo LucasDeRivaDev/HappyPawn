@@ -7,7 +7,8 @@ import { useServiceStore } from '@/store/service'
 import { getPetsByOwner, createService, getPricingConfig, getProvider } from '@/lib/firestore'
 import { calculateWalkPrice, calculateVetTransferPrice, calculatePetTransportPrice, formatPrice, DEFAULT_PRICING_CONFIG } from '@/lib/pricing'
 import { useLocation } from '@/hooks/useLocation'
-import { reverseGeocode } from '@/lib/geolocation'
+import { reverseGeocode, geocodeAddress, calculateDistance } from '@/lib/geolocation'
+import { Input } from '@/components/ui/input'
 import { GeoPoint } from 'firebase/firestore'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -27,6 +28,7 @@ export default function RequestServicePage() {
   const serviceType = params.type as ServiceType
   const providerId = searchParams.get('providerId')
   const user = useAuthStore((s) => s.user)
+  const authLoading = useAuthStore((s) => s.loading)
   const setActiveService = useServiceStore((s) => s.setActiveService)
 
   const [pets, setPets] = useState<Pet[]>([])
@@ -37,11 +39,16 @@ export default function RequestServicePage() {
   const [providerAdjust, setProviderAdjust] = useState(0)
   const [loading, setLoading] = useState(false)
   const [address, setAddress] = useState('')
+  const [destination, setDestination] = useState('')
+  const [destinationCoords, setDestinationCoords] = useState<{ lat: number; lng: number } | null>(null)
+  const [distanceKm, setDistanceKm] = useState<number | null>(null)
+  const [geocoding, setGeocoding] = useState(false)
 
   const { userLocation } = useLocation(true)
 
   useEffect(() => {
-    if (!user) { router.replace('/login'); return }
+    if (!authLoading && !user) { router.replace('/login'); return }
+    if (!user) return
     getPetsByOwner(user.uid).then(setPets)
     getPricingConfig().then((c) => { if (c) setPricingConfig(c) })
     if (providerId) {
@@ -49,7 +56,7 @@ export default function RequestServicePage() {
         if (p) setProviderAdjust(p.providerAdjustPercent ?? 0)
       })
     }
-  }, [user, router, providerId])
+  }, [user, authLoading, router, providerId])
 
   useEffect(() => {
     if (userLocation) {
@@ -58,6 +65,38 @@ export default function RequestServicePage() {
       }).catch(() => {})
     }
   }, [userLocation])
+
+  // Geocodificar destino con debounce (solo para pet_transport)
+  useEffect(() => {
+    if (serviceType !== 'pet_transport') return
+    if (!destination.trim() || destination.length < 5) {
+      setDestinationCoords(null)
+      setDistanceKm(null)
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      setGeocoding(true)
+      try {
+        const coords = await geocodeAddress(destination)
+        if (coords && userLocation) {
+          setDestinationCoords(coords)
+          const km = calculateDistance(userLocation, coords)
+          setDistanceKm(Math.max(1, Math.round(km * 10) / 10))
+        } else {
+          setDestinationCoords(null)
+          setDistanceKm(null)
+        }
+      } catch {
+        setDestinationCoords(null)
+        setDistanceKm(null)
+      } finally {
+        setGeocoding(false)
+      }
+    }, 800)
+
+    return () => clearTimeout(timer)
+  }, [destination, userLocation, serviceType])
 
   function togglePet(petId: string) {
     setSelectedPetIds((prev) =>
@@ -68,7 +107,7 @@ export default function RequestServicePage() {
   function getPrice(): number {
     if (serviceType === 'walk') return calculateWalkPrice(duration, pricingConfig, providerAdjust)
     if (serviceType === 'vet_transfer') return calculateVetTransferPrice(5, 0, false, pricingConfig)
-    return calculatePetTransportPrice(5, pricingConfig)
+    return calculatePetTransportPrice(distanceKm ?? 1, pricingConfig)
   }
 
   async function handleRequest() {
@@ -78,6 +117,10 @@ export default function RequestServicePage() {
     }
     if (selectedPetIds.length === 0) {
       toast.error('Seleccioná al menos una mascota.')
+      return
+    }
+    if (serviceType === 'pet_transport' && !destinationCoords) {
+      toast.error('Ingresá el destino para calcular el precio.')
       return
     }
     setLoading(true)
@@ -100,6 +143,10 @@ export default function RequestServicePage() {
         route: [],
         originAddress: address,
         originCoords: new GeoPoint(userLocation.lat, userLocation.lng),
+        destinationAddress: serviceType === 'pet_transport' ? destination : undefined,
+        destinationCoords: serviceType === 'pet_transport' && destinationCoords
+          ? new GeoPoint(destinationCoords.lat, destinationCoords.lng)
+          : undefined,
         requestedAt: null as any,
         createdAt: null as any,
       })
@@ -137,6 +184,35 @@ export default function RequestServicePage() {
             {address || (userLocation ? 'Obteniendo dirección...' : 'Activando GPS...')}
           </div>
         </section>
+
+        {/* Destino (solo transporte) */}
+        {serviceType === 'pet_transport' && (
+          <section>
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide mb-2 block">
+              ¿A dónde vas?
+            </Label>
+            <div className="space-y-2">
+              <Input
+                placeholder="Ej: Veterinaria Central, Santo Tomé"
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+              />
+              {geocoding && (
+                <p className="text-xs text-muted-foreground">Buscando dirección...</p>
+              )}
+              {distanceKm && !geocoding && (
+                <p className="text-xs text-green-600 font-medium">
+                  📍 {distanceKm} km desde tu ubicación
+                </p>
+              )}
+              {destination.length >= 5 && !geocoding && !destinationCoords && (
+                <p className="text-xs text-destructive">
+                  No encontramos esa dirección. Intentá con más detalle.
+                </p>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Mascotas */}
         <section>
@@ -264,7 +340,12 @@ export default function RequestServicePage() {
           className="w-full"
           size="lg"
           onClick={handleRequest}
-          disabled={loading || selectedPetIds.length === 0 || !userLocation}
+          disabled={
+            loading ||
+            selectedPetIds.length === 0 ||
+            !userLocation ||
+            (serviceType === 'pet_transport' && !destinationCoords)
+          }
         >
           {loading ? 'Enviando solicitud...' : `Solicitar ${meta.label}`}
         </Button>

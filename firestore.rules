@@ -1,0 +1,100 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helpers ──────────────────────────────────────────────────────────────
+    function isAuth() {
+      return request.auth != null;
+    }
+    function isOwner(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+    function isAdmin() {
+      return isAuth() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // ─── users ────────────────────────────────────────────────────────────────
+    // Cualquier usuario autenticado puede leer usuarios (para mostrar nombres)
+    // Solo el dueño o admin puede escribir
+    match /users/{uid} {
+      allow read: if isAuth();
+      allow write: if isOwner(uid) || isAdmin();
+    }
+
+    // ─── providers ────────────────────────────────────────────────────────────
+    // Lectura pública para usuarios autenticados (mapa de proveedores)
+    // Escritura solo del dueño o admin
+    match /providers/{uid} {
+      allow read: if isAuth();
+      allow write: if isOwner(uid) || isAdmin();
+    }
+
+    // ─── pets ─────────────────────────────────────────────────────────────────
+    match /pets/{petId} {
+      allow read: if isAuth() && (
+        resource.data.ownerId == request.auth.uid || isAdmin()
+      );
+      allow create: if isAuth() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isAuth() && resource.data.ownerId == request.auth.uid;
+      allow delete: if isAuth() && resource.data.ownerId == request.auth.uid;
+    }
+
+    // ─── services ─────────────────────────────────────────────────────────────
+    match /services/{serviceId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+
+      match /audit_log/{logId} {
+        allow read: if isAuth();
+        allow create: if isAuth();
+      }
+    }
+
+    // ─── verifications ────────────────────────────────────────────────────────
+    // Solo el dueño puede ver su verificación. Admin puede ver todas.
+    match /verifications/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if isOwner(uid) || isAdmin();
+    }
+
+    // ─── reports ──────────────────────────────────────────────────────────────
+    match /reports/{reportId} {
+      allow create: if isAuth();
+      allow read, update: if isAdmin();
+    }
+
+    // ─── ratings ──────────────────────────────────────────────────────────────
+    match /ratings/{ratingId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+    }
+
+    // ─── transactions ─────────────────────────────────────────────────────────
+    match /transactions/{transactionId} {
+      allow read: if isAuth() && (
+        resource.data.ownerId == request.auth.uid ||
+        resource.data.providerId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isAuth();
+    }
+
+    // ─── dni_index ────────────────────────────────────────────────────────────
+    // Solo se lee desde el servidor (Admin SDK) en /api/auth/dni
+    // El usuario autenticado puede crear su propio índice (no actualizar)
+    match /dni_index/{dni} {
+      allow read: if false;
+      allow create: if isAuth() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ─── config ───────────────────────────────────────────────────────────────
+    // Lectura para usuarios autenticados. Escritura solo admin.
+    match /config/{doc} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+  }
+}

@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button'
 export default function ConnectMPPage() {
   const router = useRouter()
   const user = useAuthStore((s) => s.user)
+  const authLoading = useAuthStore((s) => s.loading)
 
   useEffect(() => {
-    if (!user) router.replace('/login')
-  }, [user, router])
+    if (!authLoading && !user) router.replace('/login')
+  }, [user, authLoading, router])
 
   function handleConnect() {
     if (!user) return
